@@ -8,7 +8,8 @@ RUN wget --retry-connrefused --tries=3 -O /tmp/wordpress.tar.gz https://wordpres
     && rm /tmp/wordpress.tar.gz \
     && mkdir -p /var/www/html/tmp \
     && chown -R www-data:www-data /var/www/html \
-    && nginx -t  # Verify Nginx config
+    && rm -f /etc/nginx/conf.d/*  # Remove default configs
+    && nginx -t  # Verify config
 COPY nginx.conf /etc/nginx/nginx.conf
 USER www-data
 EXPOSE 80
