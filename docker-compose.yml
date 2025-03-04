@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  wordpress:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - WORDPRESS_DB_HOST=db
+      - WORDPRESS_DB_USER=wordpress
+      - WORDPRESS_DB_PASSWORD=${DB_PASSWORD}
+      - WORDPRESS_DB_NAME=wordpress
+    volumes:
+      - wordpress_data:/var/www/html
+    ports:
+      - "80:80"
+    depends_on:
+      - db
+    labels:
+      - "traefik.enable=true"  # Coolify uses Traefik for SSL
+      - "traefik.http.routers.wordpress.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.services.wordpress.loadbalancer.server.port=80"
+
+  db:
+    image: mariadb:10.11
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=wordpress
+      - MYSQL_USER=wordpress
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  wordpress_data:
+  db_data:
