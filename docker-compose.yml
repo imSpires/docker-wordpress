@@ -2,35 +2,57 @@ version: '3.8'
 
 services:
   wordpress:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - WORDPRESS_DB_HOST=db
-      - WORDPRESS_DB_USER=wordpress
-      - WORDPRESS_DB_PASSWORD=${DB_PASSWORD}
-      - WORDPRESS_DB_NAME=wordpress
-    volumes:
-      - wordpress_data:/var/www/html
-    ports:
-      - "80:80"
+    build: .
+    container_name: wordpress_app
+    restart: always
     depends_on:
       - db
+    env_file: .env
+    volumes:
+      - ./wordpress:/var/www/html
+    networks:
+      - wp_network
+      - traefik
     labels:
-      - "traefik.enable=true"  # Coolify uses Traefik for SSL
-      - "traefik.http.routers.wordpress.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.services.wordpress.loadbalancer.server.port=80"
+      - "traefik.enable=true"
+      - "traefik.http.routers.wordpress.rule=Host(`yourdomain.com`)" # Replace with your actual domain
+      - "traefik.http.routers.wordpress.entrypoints=websecure"
+      - "traefik.http.routers.wordpress.tls.certresolver=myresolver"
+      - "traefik.http.services.wordpress.loadbalancer.server.port=9000"
 
   db:
-    image: mariadb:10.11
-    environment:
-      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
-      - MYSQL_DATABASE=wordpress
-      - MYSQL_USER=wordpress
-      - MYSQL_PASSWORD=${DB_PASSWORD}
+    image: mariadb:latest
+    container_name: wordpress_db
+    restart: always
+    env_file: .env
     volumes:
       - db_data:/var/lib/mysql
+    networks:
+      - wp_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: wordpress_nginx
+    restart: always
+    depends_on:
+      - wordpress
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./wordpress:/var/www/html
+    networks:
+      - wp_network
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nginx.rule=Host(`yourdomain.com`)"
+      - "traefik.http.routers.nginx.entrypoints=websecure"
+      - "traefik.http.routers.nginx.tls.certresolver=myresolver"
+      - "traefik.http.services.nginx.loadbalancer.server.port=80"
+
+networks:
+  wp_network:
+  traefik: # This allows your services to talk to Coolify's built-in Traefik
+    external: true
 
 volumes:
-  wordpress_data:
   db_data:
