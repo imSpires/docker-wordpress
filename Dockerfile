@@ -1,18 +1,20 @@
 # Use a lightweight PHP-FPM Alpine base image
 FROM php:8.2-fpm-alpine
 
-# Install dependencies for WordPress
+# Install dependencies for WordPress and wget
 RUN apk add --no-cache \
     nginx \
     mariadb-client \
+    wget \
+    ca-certificates \
     && docker-php-ext-install mysqli pdo pdo_mysql \
     && rm -rf /var/cache/apk/*
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Download and extract WordPress
-RUN wget -O /tmp/wordpress.tar.gz https://wordpress.org/latest.tar.gz \
+# Download and extract WordPress with retry logic
+RUN wget --retry-connrefused --tries=3 -O /tmp/wordpress.tar.gz https://wordpress.org/latest.tar.gz \
     && tar -xzf /tmp/wordpress.tar.gz -C /var/www/html --strip-components=1 \
     && rm /tmp/wordpress.tar.gz \
     && chown -R www-data:www-data /var/www/html
